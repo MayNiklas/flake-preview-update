@@ -1,0 +1,14 @@
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crs"
+version = "1.0.0"
+description = "Getting infos about a flake update"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.scripts]
+flake_preview_update = "flake_preview_update.main:main"
