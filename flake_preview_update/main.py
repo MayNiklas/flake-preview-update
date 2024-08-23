@@ -136,6 +136,14 @@ class Flake:
 
         print("\n".join(self.diff_list))
 
+    def save_diff_list(self):
+        """
+        Save the diff list to a file.
+        """
+
+        with open("diff_list.txt", "w") as f:
+            f.write("\n".join(self.diff_list))
+
     def git_revert_update(self):
         """
         Revert the update of a flake repository.
@@ -195,6 +203,7 @@ def main():
 
     print("Went from nixpkgs revision", flake.nixpkgs_before, "to", flake.nixpkgs_after)
     flake.output_diff_list()
+    flake.save_diff_list()
 
     flake.git_revert_update()
 
