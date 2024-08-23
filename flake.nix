@@ -17,14 +17,17 @@
       formatter = forAllSystems (system: nixpkgsFor.${system}.nixpkgs-fmt);
 
       devShells = forAllSystems (system: {
-        default = nixpkgsFor.${system}.callPackage
-          ({ mkShell, python3, ... }:
-            mkShell {
-              buildInputs = [
-                (python3.withPackages (p: with p; [ ]))
-              ];
-            })
-          { };
+        default = let flake_preview_update = self.packages.${system}.flake_preview_update; in
+          nixpkgsFor.${system}.callPackage
+            ({ mkShell, python3, ... }:
+              mkShell {
+                buildInputs =
+                  flake_preview_update.buildInputs ++ [
+                    (python3.withPackages (p: with p; [ ] ++
+                    flake_preview_update.nativeBuildInputs))
+                  ];
+              })
+            { };
       });
 
       packages = forAllSystems (system:
@@ -39,7 +42,6 @@
                 src = self;
                 nativeBuildInputs = with python3.pkgs; [ setuptools ];
                 buildInputs = with pkgs; [ git nix ];
-                propagatedBuildInputs = with python3.pkgs; [ ];
                 pythonImportsCheck = [ "flake_preview_update" ];
                 meta = with lib; {
                   description = "Get infos before updating a flake";
