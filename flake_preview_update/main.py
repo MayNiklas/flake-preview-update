@@ -45,9 +45,10 @@ class Flake:
         )
 
         flake_info = json.loads(flake_info.stdout)
+        input_name = flake_info["locks"]["nodes"]["root"]["inputs"]["nixpkgs"]
 
         return self.unix_time_to_human_readable(
-            flake_info["locks"]["nodes"]["nixpkgs"]["locked"]["lastModified"]
+            flake_info["locks"]["nodes"][input_name]["locked"]["lastModified"]
         )
 
     def get_flake_show(self):
