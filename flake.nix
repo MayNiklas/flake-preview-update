@@ -23,7 +23,7 @@
               mkShell {
                 buildInputs =
                   flake_preview_update.buildInputs ++ [
-                    (python3.withPackages (p: with p; [ ] ++
+                    (python3.withPackages (p: with p; [ black pip ] ++
                     flake_preview_update.nativeBuildInputs))
                   ];
               })

@@ -1,5 +1,6 @@
 import argparse
 import pathlib
+import datetime
 import subprocess
 import json
 
@@ -20,6 +21,16 @@ class Flake:
         self.build_hosts = []
 
         self.diff_list = []
+        self.diff_lists = {}
+
+    def unix_time_to_human_readable(self, unix_time: str):
+        """
+        Convert unix time to human readable time.
+        """
+
+        return datetime.datetime.fromtimestamp(int(unix_time)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
     def get_nixpkgs_last_modified(self):
         """
@@ -34,7 +45,10 @@ class Flake:
         )
 
         flake_info = json.loads(flake_info.stdout)
-        return flake_info["locks"]["nodes"]["nixpkgs"]["locked"]["lastModified"]
+
+        return self.unix_time_to_human_readable(
+            flake_info["locks"]["nodes"]["nixpkgs"]["locked"]["lastModified"]
+        )
 
     def get_flake_show(self):
         """
@@ -122,26 +136,56 @@ class Flake:
             text=True,
         )
 
+        self.diff_lists[host] = []
+
         # for each line in result.stdout
         for line in result.stdout.split("\n"):
-            self.diff_list.append(line)
+            if line != "":
+                self.diff_lists[host].append(line)
 
-    def output_diff_list(self):
+    def save_diff_lists(self):
         """
-        Output the diff list.
+        Save each diff list to a file.
         """
+
+        # make sure diff_lists directory exists
+        pathlib.Path("diff_lists").mkdir(parents=True, exist_ok=True)
+
+        # save diff_lists to diff_lists.json
+        with open("diff_lists/diff_lists.json", "w") as f:
+            json.dump(self.diff_lists, f, indent=4)
+
+        # for each host in diff_lists
+        for host in self.diff_lists:
+            file_content = (
+                f"Host: {host} \n"
+                + f"{self.nixpkgs_before} -> {self.nixpkgs_after}\n"
+                + "----------------------------------------------------------------------------\n"
+                + "\n".join(self.diff_lists[host])
+            )
+            with open(f"diff_lists/{host}.txt", "w") as f:
+                f.write(file_content)
+            print(
+                "----------------------------------------------------------------------------"
+                + "\n"
+                + file_content
+            )
+            self.diff_list.extend(self.diff_lists[host])
 
         # deduplicate diff_list, sort it alphabetically
         self.diff_list = sorted(list(set(self.diff_list)))
 
-        print("\n".join(self.diff_list))
+        # add first line to diff_list
+        self.diff_list.insert(
+            0,
+            "----------------------------------------------------------------------------",
+        )
+        self.diff_list.insert(
+            0,
+            f"Went from nixpkgs revision {self.nixpkgs_before} -> {self.nixpkgs_after}",
+        )
 
-    def save_diff_list(self):
-        """
-        Save the diff list to a file.
-        """
-
-        with open("diff_list.txt", "w") as f:
+        with open("diff_lists/diff_list.txt", "w") as f:
             f.write("\n".join(self.diff_list))
 
     def git_revert_update(self):
@@ -201,9 +245,7 @@ def main():
     for host in flake.build_hosts:
         flake.get_diff_for_host(host)
 
-    print("Went from nixpkgs revision", flake.nixpkgs_before, "to", flake.nixpkgs_after)
-    flake.output_diff_list()
-    flake.save_diff_list()
+    flake.save_diff_lists()
 
     flake.git_revert_update()
 
